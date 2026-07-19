@@ -1,12 +1,13 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+import os
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import TypedDict
 from langgraph.graph import StateGraph, END
 from langchain_groq import ChatGroq
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEndpointEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
@@ -19,7 +20,11 @@ documents = [
     Document(page_content="Rahul K is an expert in Python, Django, Docker, and Kubernetes with 10+ years."),
 ]
 
-embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+embeddings = HuggingFaceEndpointEmbeddings(
+    model="sentence-transformers/all-MiniLM-L6-v2",
+    huggingfacehub_api_token=os.getenv("HF_TOKEN")
+)
+
 vectorstore = FAISS.from_documents(documents, embeddings)
 retriever = vectorstore.as_retriever(search_kwargs={"k": 2})
 llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
@@ -53,7 +58,6 @@ graph.add_edge("retrieve", "generate")
 graph.add_edge("generate", END)
 rag_graph = graph.compile()
 
-# --- FastAPI app ---
 api = FastAPI(title="Recruiting RAG API")
 
 class Query(BaseModel):
